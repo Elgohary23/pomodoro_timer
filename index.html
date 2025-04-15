@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomodoro Timer with Modal Settings</title>
+    <meta name="description" content="Pomodoro Timer with Modal Settings - Boost your productivity with focus intervals and customizable settings.">
+    <meta name="keywords" content="Pomodoro Timer, Productivity, Focus, Time Management, Task Management">
+    <meta name="author" content="Ebrahem Elgohary">
+    <meta property="og:title" content="Pomodoro Timer with Modal Settings">
+    <meta property="og:description" content="Boost your productivity with focus intervals and customizable settings.">
+    <meta property="og:type" content="website">
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "WebApplication",
+            "name": "Pomodoro Timer",
+            "url": "https://example.com/pomodoro-timer",
+            "description": "Boost your productivity with focus intervals and customizable settings.",
+            "applicationCategory": "Productivity",
+            "author": {
+                "@type": "Person",
+                "name": "Ebrahem Elgohary"
+            }
+        }
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4F46E5',
+                        secondary: '#10B981',
+                        danger: '#EF4444',
+                        dark: '#1F2937',
+                        light: '#F3F4F6',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f9fafb;
+        }
+        
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.35s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        .modal {
+            transition: all 0.3s ease-out;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-20px);
+        }
+        
+        .modal.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        
+        .modal-overlay {
+            transition: opacity 0.3s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            height: 150px;
+            gap: 12px;
+            padding-top: 20px;
+        }
+        
+        .bar-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-grow: 1;
+        }
+        
+        .bar {
+            width: 100%;
+            background-color: #4F46E5;
+            border-radius: 4px 4px 0 0;
+            transition: height 0.5s ease;
+        }
+        
+        .bar-label {
+            margin-top: 8px;
+            font-size: 12px;
+            color: #6B7280;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50">
+    <div class="container mx-auto px-4 py-8 max-w-md">
+        <!-- Header -->
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-dark">Pomodoro Timer</h1>
+            <p class="text-gray-500">Focus with timed intervals</p>
+        </header>
+
+        <!-- Timer -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <div class="flex justify-center mb-6">
+                <div class="relative w-48 h-48 cursor-pointer" id="timer-container">
+                    <svg class="w-full h-full" viewBox="0 0 100 100">
+                        <circle class="text-gray-200" stroke-width="8" stroke="currentColor" fill="transparent" r="40" cx="50" cy="50" />
+                        <circle id="progress-circle" class="progress-ring__circle text-primary" stroke-width="8" stroke-linecap="round" stroke="currentColor" fill="transparent" r="40" cx="50" cy="50" />
+                    </svg>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <div id="timer-display" class="text-4xl font-bold text-dark">25:00</div>
+                        <div id="timer-state" class="text-gray-500 uppercase text-sm mt-1">Ready</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-center space-x-4 mb-6">
+                <button id="start-timer" class="bg-primary text-white py-2 px-6 rounded-lg hover:bg-indigo-700 transition duration-200">
+                    <i class="fas fa-play mr-2"></i> Start
+                </button>
+                <button id="pause-timer" class="bg-gray-200 text-gray-700 py-2 px-6 rounded-lg hover:bg-gray-300 transition duration-200" disabled>
+                    <i class="fas fa-pause mr-2"></i> Pause
+                </button>
+                <button id="reset-timer" class="bg-gray-200 text-gray-7 00 py-2 px-6 rounded-lg hover:bg-gray-300 transition duration-200">
+                    <i class="fas fa-redo mr-2"></i> Reset
+                </button>
+            </div>
+            
+            <div class="flex justify-between mb-4">
+                <button id="settings-btn" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-cog mr-1"></i> Settings
+                </button>
+                <button id="stats-btn" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-chart-bar mr-1"></i> Stats
+                </button>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4">
+                <div class="flex justify-between items-center">
+                    <span class="text-sm font-medium text-gray-700">Current Mode:</span>
+                    <span id="current-mode" class="text-sm font-medium text-primary">Work</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Social Links -->
+        <div class="flex justify-center space-x-4 mt-8">
+            <a href="https://www.linkedin.com/in/ebrahem-elgohary-4837b42a0/" 
+               target="_blank" 
+               class="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition duration-200">
+                <i class="fab fa-linkedin mr-2"></i> LinkedIn
+            </a>
+            <a href="https://github.com/Elgohary23" 
+               target="_blank" 
+               class="bg-gray-800 text-white py-2 px-4 rounded-lg hover:bg-gray-900 transition duration-200">
+                <i class="fab fa-github mr-2"></i> GitHub
+            </a>
+        </div>
+
+        <!-- Modal Overlay -->
+        <div id="modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center modal-overlay opacity-0 invisible transition-opacity duration-300">
+            <!-- Settings Modal -->
+            <div id="settings-modal" class="modal bg-white rounded-xl shadow-lg p-6 w-full max-w-md mx-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold text-dark">Timer Settings</h2>
+                    <button id="close-modal" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label for="work-duration" class="block text-sm font-medium text-gray-700 mb-1">Work Duration (minutes)</label>
+                        <input type="number" id="work-duration" min="1" max="60" value="25" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                    </div>
+                    <div>
+                        <label for="short-break" class="block text-sm font-medium text-gray-700 mb-1">Short Break (minutes)</label>
+                        <input type="number" id="short-break" min="1" max="15" value="5" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                    </div>
+                    <div>
+                        <label for="long-break" class="block text-sm font-medium text-gray-700 mb-1">Long Break (minutes)</label>
+                        <input type="number" id="long-break" min="1, max=30" value="15" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                    </div>
+                    <div>
+                        <label for="pomodoros-before-long" class="block text-sm font-medium text-gray-700 mb-1">Pomodoros Before Long Break</label>
+                        <input type="number" id="pomodoros-before-long" min="1" max="10" value="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary">
+                    </div>
+                    <div class="pt-2">
+                        <button id="save-settings" class="w-full bg-secondary text-white py-2 px-4 rounded-lg hover:bg-emerald-700 transition duration-200">
+                            Save Settings
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Stats Modal -->
+            <div id="stats-modal" class="modal bg-white rounded-xl shadow-lg p-6 w-full max-w-md mx-4">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold text-dark">Focus Stats</h2>
+                    <button id="close-stats-modal" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="mb-4">
+                    <h3 class="text-lg font-medium text-gray-800 mb-2">Last 7 Days</h3>
+                    <div class="bar-chart" id="stats-chart">
+                        <!-- Chart bars will be inserted here by JavaScript -->
+                    </div>
+                </div>
+                
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-medium text-gray-700">Total Focus Time:</span>
+                        <span id="total-focus-time" class="text-sm font-medium text-primary">0 minutes</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notification -->
+        <div id="toast" class="fixed bottom-4 right-4 bg-dark text-white px-4 py-2 rounded-lg shadow-lg flex items-center space-x-2 hidden">
+            <i class="fas fa-check-circle"></i>
+            <span id="toast-message"></span>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const timerDisplay = document.getElementById('timer-display');
+        const timerState = document.getElementById('timer-state');
+        const currentModeDisplay = document.getElementById('current-mode');
+        const startTimerBtn = document.getElementById('start-timer');
+        const pauseTimerBtn = document.getElementById('pause-timer');
+        const resetTimerBtn = document.getElementById('reset-timer');
+        const progressCircle = document.getElementById('progress-circle');
+        const timerContainer = document.getElementById('timer-container');
+        const settingsBtn = document.getElementById('settings-btn');
+        const statsBtn = document.getElementById('stats-btn');
+        
+        const workDurationInput = document.getElementById('work-duration');
+        const shortBreakInput = document.getElementById('short-break');
+        const longBreakInput = document.getElementById('long-break');
+        const pomodorosBeforeLongInput = document.getElementById('pomodoros-before-long');
+        const saveSettingsBtn = document.getElementById('save-settings');
+        
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toast-message');
+        
+        // Modal Elements
+        const modalOverlay = document.getElementById('modal-overlay');
+        const settingsModal = document.getElementById('settings-modal');
+        const statsModal = document.getElementById('stats-modal');
+        const closeModalBtn = document.getElementById('close-modal');
+        const closeStatsModalBtn = document.getElementById('close-stats-modal');
+        const statsChart = document.getElementById('stats-chart');
+        const totalFocusTime = document.getElementById('total-focus-time');
+
+        // Timer State
+        let timer;
+        let timeLeft = 25 * 60; // Default 25 minutes
+        let isRunning = false;
+        let isPaused = false;
+        let currentMode = 'work';
+        let completedPomodoros = 0;
+        let totalSeconds = 25 * 60;
+
+        // Settings
+        let settings = {
+            workDuration: 25,
+            shortBreak: 5,
+            longBreak: 15,
+            pomodorosBeforeLong: 4
+        };
+
+        // Initialize the app
+        function init() {
+            loadSettings();
+            updateTimerDisplay();
+            setupEventListeners();
+        }
+
+        function loadSettings() {
+            const savedSettings = localStorage.getItem('pomodoroDurationSettings');
+            if (savedSettings) {
+                settings = JSON.parse(savedSettings);
+                workDurationInput.value = settings.workDuration;
+                shortBreakInput.value = settings.shortBreak;
+                longBreakInput.value = settings.longBreak;
+                pomodorosBeforeLongInput.value = settings.pomodorosBeforeLong;
+                
+                // Update timer with saved settings
+                timeLeft = settings.workDuration * 60;
+                totalSeconds = timeLeft;
+                updateTimerDisplay();
+            }
+        }
+
+        function saveSettings() {
+            settings = {
+                workDuration: parseInt(workDurationInput.value),
+                shortBreak: parseInt(shortBreakInput.value),
+                longBreak: parseInt(longBreakInput.value),
+                pomodorosBeforeLong: parseInt(pomodorosBeforeLongInput.value)
+            };
+            
+            localStorage.setItem('pomodoroDurationSettings', JSON.stringify(settings));
+            
+            if (!isRunning) {
+                if (currentMode === 'work') {
+                    timeLeft = settings.workDuration * 60;
+                    totalSeconds = timeLeft;
+                } else if (currentMode === 'shortBreak') {
+                    timeLeft = settings.shortBreak * 60;
+                    totalSeconds = timeLeft;
+                } else {
+                    timeLeft = settings.longBreak * 60;
+                    totalSeconds = timeLeft;
+                }
+                updateTimerDisplay();
+            }
+            
+            showToast('Settings saved successfully!');
+            closeModal();
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            const circumference = 2 * Math.PI * 40;
+            const offset = circumference - (timeLeft / totalSeconds) * circumference;
+            progressCircle.style.strokeDasharray = circumference;
+            progressCircle.style.strokeDashoffset = offset;
+            
+            if (currentMode === 'work') {
+                progressCircle.classList.remove('text-secondary', 'text-danger');
+                progressCircle.classList.add('text-primary');
+                currentModeDisplay.textContent = 'Work';
+            } else if (currentMode === 'shortBreak') {
+                progressCircle.classList.remove('text-primary', 'text-danger');
+                progressCircle.classList.add('text-secondary');
+                currentModeDisplay.textContent = 'Short Break';
+            } else {
+                progressCircle.classList.remove('text-primary', 'text-secondary');
+                progressCircle.classList.add('text-danger');
+                currentModeDisplay.textContent = 'Long Break';
+            }
+        }
+
+        function startTimer() {
+            if (isRunning) return;
+            
+            if (!isPaused) {
+                if (currentMode === 'work') {
+                    totalSeconds = settings.workDuration * 60;
+                    timeLeft = settings.workDuration * 60;
+                } else {
+                    totalSeconds = currentMode === 'shortBreak' 
+                        ? settings.shortBreak * 60
+                        : settings.longBreak * 60;
+                    timeLeft = totalSeconds;
+                }
+            }
+            
+            isRunning = true;
+            isPaused = false;
+            startTimerBtn.disabled = true;
+            pauseTimerBtn.disabled = false;
+            
+            if (currentMode === 'work') {
+                timerState.textContent = 'Focus Time';
+            } else if (currentMode === 'shortBreak') {
+                timerState.textContent = 'Short Break';
+            } else {
+                timerState.textContent = 'Long Break';
+            }
+            
+            const startTime = Date.now();
+            const initialTimeLeft = timeLeft;
+            
+            timer = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                timeLeft = initialTimeLeft - elapsed;
+                
+                if (timeLeft <= 0) {
+                    timeLeft = 0;
+                    clearInterval(timer);
+                    timerComplete();
+                }
+                
+                updateTimerDisplay();
+            }, 200);
+        }
+
+        function pauseTimer() {
+            if (!isRunning) return;
+            
+            clearInterval(timer);
+            isRunning = false;
+            isPaused = true;
+            startTimerBtn.disabled = false;
+            pauseTimerBtn.disabled = true;
+            timerState.textContent = 'Paused';
+        }
+
+        function resetTimer() {
+            clearInterval(timer);
+            isRunning = false;
+            isPaused = false;
+            startTimerBtn.disabled = false;
+            pauseTimerBtn.disabled = true;
+            
+            if (currentMode === 'work') {
+                totalSeconds = settings.workDuration * 60;
+            } else if (currentMode === 'shortBreak') {
+                totalSeconds = settings.shortBreak * 60;
+            } else {
+                totalSeconds = settings.longBreak * 60;
+            }
+            
+            timeLeft = totalSeconds;
+            updateTimerDisplay();
+            timerState.textContent = currentMode === 'work' ? 'Ready' : 'Break Ready';
+        }
+
+        function timerComplete() {
+            isRunning = false;
+            startTimerBtn.disabled = false;
+            pauseTimerBtn.disabled = true;
+            
+            // Play sound
+            const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3');
+            audio.play();
+            
+            if (currentMode === 'work') {
+                completedPomodoros++;
+                
+                // Save focus time to localStorage
+                saveFocusTime(settings.workDuration);
+                
+                if (completedPomodoros % settings.pomodorosBeforeLong === 0) {
+                    currentMode = 'longBreak';
+                    timeLeft = settings.longBreak * 60;
+                    totalSeconds = timeLeft;
+                    timerState.textContent = 'Long Break Started';
+                    showToast('Time for a long break!');
+                } else {
+                    currentMode = 'shortBreak';
+                    timeLeft = settings.shortBreak * 60;
+                    totalSeconds = timeLeft;
+                    timerState.textContent = 'Short Break Started';
+                    showToast('Time for a short break!');
+                }
+            } else {
+                currentMode = 'work';
+                timeLeft = settings.workDuration * 60;
+                totalSeconds = timeLeft;
+                timerState.textContent = 'Ready';
+                showToast('Break over, back to work!');
+            }
+            
+            updateTimerDisplay();
+        }
+        
+        function saveFocusTime(minutes) {
+            const today = new Date().toISOString().split('T')[0]; // Get YYYY-MM-DD format
+            const focusData = JSON.parse(localStorage.getItem('pomodoroFocusData') || '{}');
+            
+            if (focusData[today]) {
+                focusData[today] += minutes;
+            } else {
+                focusData[today] = minutes;
+            }
+            
+            localStorage.setItem('pomodoroFocusData', JSON.stringify(focusData));
+        }
+        
+        function loadFocusData() {
+            const focusData = JSON.parse(localStorage.getItem('pomodoroFocusData') || '{}');
+            const today = new Date();
+            const last7Days = [];
+            
+            // Generate dates for the last 7 days
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toISOString().split('T')[0];
+                const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+                
+                last7Days.push({
+                    date: dateStr,
+                    day: dayName,
+                    minutes: focusData[dateStr] || 0
+                });
+            }
+            
+            return last7Days;
+        }
+        
+        function renderStatsChart() {
+            const focusData = loadFocusData();
+            let totalMinutes = 0;
+            
+            // Clear previous chart
+            statsChart.innerHTML = '';
+            
+            // Find max minutes for scaling
+            const maxMinutes = Math.max(1, ...focusData.map(day => day.minutes));
+            
+            // Create bars for each day
+            focusData.forEach(day => {
+                totalMinutes += day.minutes;
+                
+                const barHeight = (day.minutes / maxMinutes) * 100;
+                
+                const barContainer = document.createElement('div');
+                barContainer.className = 'bar-container';
+                
+                const bar = document.createElement('div');
+                bar.className = 'bar';
+                bar.style.height = `${barHeight}%`;
+                bar.title = `${day.minutes} minutes`;
+                
+                const label = document.createElement('div');
+                label.className = 'bar-label';
+                label.textContent = day.day;
+                
+                barContainer.appendChild(bar);
+                barContainer.appendChild(label);
+                statsChart.appendChild(barContainer);
+            });
+            
+            // Update total focus time
+            totalFocusTime.textContent = `${totalMinutes} minute${totalMinutes !== 1 ? 's' : ''}`;
+        }
+
+        function showToast(message) {
+            toastMessage.textContent = message;
+            toast.classList.remove('hidden');
+            toast.classList.add('flex');
+            
+            setTimeout(() => {
+                toast.classList.remove('flex');
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+
+        // Modal functions
+        function openSettingsModal() {
+            if (isRunning) {
+                showToast("Please pause or reset the timer before changing settings");
+                return;
+            }
+            
+            document.body.style.overflow = 'hidden';
+            modalOverlay.classList.remove('invisible', 'opacity-0');
+            modalOverlay.classList.add('visible', 'opacity-100');
+            settingsModal.classList.add('active');
+            statsModal.classList.remove('active');
+        }
+        
+        function openStatsModal() {
+            document.body.style.overflow = 'hidden';
+            modalOverlay.classList.remove('invisible', 'opacity-0');
+            modalOverlay.classList.add('visible', 'opacity-100');
+            statsModal.classList.add('active');
+            settingsModal.classList.remove('active');
+            
+            // Render the chart when stats modal is opened
+            renderStatsChart();
+        }
+
+        function closeModal() {
+            document.body.style.overflow = 'auto';
+            modalOverlay.classList.remove('visible', 'opacity-100');
+            modalOverlay.classList.add('invisible', 'opacity-0');
+            settingsModal.classList.remove('active');
+            statsModal.classList.remove('active');
+        }
+
+        function setupEventListeners() {
+            startTimerBtn.addEventListener('click', startTimer);
+            pauseTimerBtn.addEventListener('click', pauseTimer);
+            resetTimerBtn.addEventListener('click', resetTimer);
+            saveSettingsBtn.addEventListener('click', saveSettings);
+            settingsBtn.addEventListener('click', openSettingsModal);
+            statsBtn.addEventListener('click', openStatsModal);
+            
+            // Modal events
+            timerContainer.addEventListener('click', openSettingsModal);
+            closeModalBtn.addEventListener('click', closeModal);
+            closeStatsModalBtn.addEventListener('click', closeModal);
+            modalOverlay.addEventListener('click', (e) => {
+                if (e.target === modalOverlay) {
+                    closeModal();
+                }
+            });
+            
+            // Close modal with ESC key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && modalOverlay.classList.contains('visible')) {
+                    closeModal();
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
